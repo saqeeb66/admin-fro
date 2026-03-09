@@ -9,14 +9,11 @@ async function loadImageAsBase64(tripId) {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(
-      `http://43.205.253.229:9090/api/admin/signature/${tripId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const res = await fetch(`/api/admin/signature/${tripId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!res.ok) return null;
 
@@ -27,7 +24,9 @@ async function loadImageAsBase64(tripId) {
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
-  } catch {
+
+  } catch (error) {
+    console.error("Error loading signature:", error);
     return null;
   }
 }
@@ -35,10 +34,12 @@ async function loadImageAsBase64(tripId) {
 export async function generateDutySlip(dutySlip, trip, garageData) {
   const doc = new jsPDF("p", "mm", "a4");
 
+  /* ===== TITLE ===== */
   doc.setFontSize(16);
   doc.text("DUTY SLIP", 105, 15, { align: "center" });
   doc.setFontSize(9);
 
+  /* ===== TRIP DETAILS ===== */
   autoTable(doc, {
     startY: 25,
     theme: "grid",
@@ -50,6 +51,7 @@ export async function generateDutySlip(dutySlip, trip, garageData) {
     ],
   });
 
+  /* ===== GARAGE DATA TABLE ===== */
   autoTable(doc, {
     startY: doc.lastAutoTable.finalY + 6,
     theme: "grid",
@@ -61,15 +63,19 @@ export async function generateDutySlip(dutySlip, trip, garageData) {
     ]),
   });
 
+  /* ===== SIGNATURE ===== */
   const signY = doc.lastAutoTable.finalY + 18;
+
   doc.text("Customer Signature", 15, signY);
 
   const base64Img = await loadImageAsBase64(trip.tripId);
+
   if (base64Img) {
     doc.addImage(base64Img, "PNG", 15, signY + 4, 50, 20);
   } else {
     doc.text("Signature not available", 15, signY + 10);
   }
 
+  /* ===== SAVE PDF ===== */
   doc.save(`DutySlip-${trip.tripId}.pdf`);
 }
