@@ -11,12 +11,4 @@ export const assignDriverToTrip = (tripId, driverId) => {
 };
 
 /* BOOK TRIP (ROLE BASED) */
-export const bookTrip = (data) => {
-  const role = localStorage.getItem("role");
-
-  if (role === "ADMIN") {
-    return api.post("/admin/trips", data);
-  }
-
-  return api.post("/user/trips", data);
-};
+export const bookTrip = (data) => { return api.post("/user/trips", data); };
