@@ -9,7 +9,7 @@ async function loadImageAsBase64(tripId) {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`https://43.205.253.229:9090/api/admin/signature/${tripId}`, {
+    const res = await fetch(`/api/admin/signature/${tripId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
