@@ -1,0 +1,187 @@
+/* SIDEBAR */
+.sidebar {
+    background: linear-gradient(180deg, #0f1c2e, #09111d);
+    color: white;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    padding: 24px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .logo-icon {
+    background: #ff9f1a;
+    color: black;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-right: 10px;
+  }
+  
+  .logo-text {
+    color: white;
+  }
+  
+  .menu-section {
+    padding: 10px 0;
+  }
+  
+  .menu-title {
+    padding: 10px 24px;
+    font-size: 11px;
+    color: #8fa1c7;
+  }
+  
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    color: #cdd6f4;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  
+  .menu-item:hover,
+  .menu-item.active {
+    background: rgba(255, 159, 26, 0.15);
+    color: #ff9f1a;
+  }
+  
+  .logout {
+    position: absolute;
+    bottom: 20px;
+    left: 24px;
+    cursor: pointer;
+    color: #ff9f1a;
+  }
+  
+  /* HEADER */
+  .top-header {
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+  }
+  
+  .search-box {
+    width: 300px;
+  }
+  
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .icon {
+    font-size: 20px;
+  }
+  
+  .avatar {
+    background: #ff9f1a;
+    color: black;
+    font-weight: bold;
+  }
+  
+  /* CONTENT */
+  .content {
+    padding: 24px;
+    background: #f6f8fb;
+  }
+/* DASHBOARD */
+.stat-card {
+    text-align: center;
+    border-radius: 12px;
+  }
+  
+  .stat-icon {
+    font-size: 26px;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .stat-icon.blue {
+    background: #e6f4ff;
+    color: #1677ff;
+  }
+  
+  .stat-icon.orange {
+    background: #fff3e0;
+    color: #fa8c16;
+  }
+  
+  .stat-icon.green {
+    background: #e6fffb;
+    color: #13c2c2;
+  }
+  
+  .stat-icon.purple {
+    background: #f9f0ff;
+    color: #722ed1;
+  }
+  
+  .trip-card {
+    border-radius: 14px;
+  }
+  
+  .trip-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+    /* ASSIGN DRIVER */
+.select-card {
+    margin-bottom: 12px;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .select-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .select-card.active {
+    border: 2px solid #ff9f1a;
+    background: #fff7e6;
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+  }
+  
+  /* DRIVERS PAGE */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .driver-card {
+    border-radius: 14px;
+    transition: all 0.2s ease;
+  }
+  
+  .driver-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  .driver-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  
+  .driver-name {
+    font-size: 15px;
+  }
+  

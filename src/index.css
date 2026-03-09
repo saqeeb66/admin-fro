@@ -1,0 +1,48 @@
+body {
+  font-family: Arial;
+}
+
+.login-box {
+  width: 300px;
+  margin: 100px auto;
+}
+
+input {
+  display: block;
+  margin: 10px 0;
+  padding: 8px;
+}
+
+button {
+  padding: 8px 16px;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  background: #222;
+  color: white;
+  padding: 10px;
+}
+
+.navbar a {
+  color: white;
+  margin-right: 10px;
+}
+.dslip {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.dslip td,
+.dslip th {
+  border: 1px solid #000;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.dslip th {
+  background: #f2f2f2;
+  text-align: center;
+}
