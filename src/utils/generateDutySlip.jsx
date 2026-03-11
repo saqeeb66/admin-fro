@@ -2,80 +2,80 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* ===== HELPERS ===== */
-const num = v => Number(v || 0);
+const num = (v) => Number(v || 0);
 
-/* ===== LOAD SIGNATURE SAFELY ===== */
-async function loadImageAsBase64(tripId) {
-  try {
-    const token = localStorage.getItem("token");
+/* ===== LOAD IMAGE FROM S3 AS BASE64 ===== */
+async function loadImageAsBase64(imageUrl) {
+try {
+if (!imageUrl) return null;
 
-    const res = await fetch(`/api/admin/signature/${tripId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+```
+const res = await fetch(imageUrl);
 
-    if (!res.ok) return null;
+if (!res.ok) return null;
 
-    const blob = await res.blob();
+const blob = await res.blob();
 
-    return await new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
+return await new Promise((resolve) => {
+  const reader = new FileReader();
+  reader.onloadend = () => resolve(reader.result);
+  reader.readAsDataURL(blob);
+});
+```
 
-  } catch (error) {
-    console.error("Error loading signature:", error);
-    return null;
-  }
+} catch (error) {
+console.error("Error loading signature:", error);
+return null;
+}
 }
 
+/* ===== GENERATE DUTY SLIP ===== */
 export async function generateDutySlip(dutySlip, trip, garageData) {
-  const doc = new jsPDF("p", "mm", "a4");
 
-  /* ===== TITLE ===== */
-  doc.setFontSize(16);
-  doc.text("DUTY SLIP", 105, 15, { align: "center" });
-  doc.setFontSize(9);
+const doc = new jsPDF("p", "mm", "a4");
 
-  /* ===== TRIP DETAILS ===== */
-  autoTable(doc, {
-    startY: 25,
-    theme: "grid",
-    body: [
-      ["Trip ID", trip.tripId, "Vehicle", trip.vehicleType],
-      ["Start Location", trip.startLocation, "Start KM", trip.startKm],
-      ["End Location", trip.endLocation, "End KM", trip.endKm],
-      ["Driver", trip.driverName, "Phone", trip.driverPhone],
-    ],
-  });
+/* ===== TITLE ===== */
+doc.setFontSize(16);
+doc.text("DUTY SLIP", 105, 15, { align: "center" });
+doc.setFontSize(9);
 
-  /* ===== GARAGE DATA TABLE ===== */
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 6,
-    theme: "grid",
-    head: [["Type", "KM", "Time"]],
-    body: garageData.map(g => [
-      g.type,
-      g.km || "-",
-      g.time || "-"
-    ]),
-  });
+/* ===== TRIP DETAILS ===== */
+autoTable(doc, {
+startY: 25,
+theme: "grid",
+body: [
+["Trip ID", trip.tripId, "Vehicle", trip.vehicleType],
+["Start Location", trip.startLocation, "Start KM", trip.startKm],
+["End Location", trip.endLocation, "End KM", trip.endKm],
+["Driver", trip.driverName, "Phone", trip.driverPhone],
+],
+});
 
-  /* ===== SIGNATURE ===== */
-  const signY = doc.lastAutoTable.finalY + 18;
+/* ===== GARAGE DATA ===== */
+autoTable(doc, {
+startY: doc.lastAutoTable.finalY + 6,
+theme: "grid",
+head: [["Type", "KM", "Time"]],
+body: garageData.map((g) => [
+g.type,
+g.km || "-",
+g.time || "-",
+]),
+});
 
-  doc.text("Customer Signature", 15, signY);
+/* ===== SIGNATURE ===== */
+const signY = doc.lastAutoTable.finalY + 18;
 
-  const base64Img = await loadImageAsBase64(trip.tripId);
+doc.text("Customer Signature", 15, signY);
 
-  if (base64Img) {
-    doc.addImage(base64Img, "PNG", 15, signY + 4, 50, 20);
-  } else {
-    doc.text("Signature not available", 15, signY + 10);
-  }
+const base64Img = await loadImageAsBase64(trip.signatureUrl);
 
-  /* ===== SAVE PDF ===== */
-  doc.save(`DutySlip-${trip.tripId}.pdf`);
+if (base64Img) {
+doc.addImage(base64Img, "PNG", 15, signY + 4, 50, 20);
+} else {
+doc.text("Signature not available", 15, signY + 10);
+}
+
+/* ===== SAVE PDF ===== */
+doc.save(`DutySlip-${trip.tripId}.pdf`);
 }
