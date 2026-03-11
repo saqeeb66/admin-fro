@@ -315,15 +315,19 @@ export default function TripFullReport() {
 
       {/* ================= PDF ================= */}
 
-      <Button
-        type="primary"
-        style={{ marginTop: 20 }}
-        onClick={() =>
-          generateDutySlip(dutySlip, trip, garageData)
-        }
-      >
-        Download Official Duty Slip (PDF)
-      </Button>
+<Button
+  type="primary"
+  style={{ marginTop: 20 }}
+  onClick={async () => {
+    try {
+      await generateDutySlip(dutySlip, trip, garageData);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    }
+  }}
+>
+  Download Official Duty Slip (PDF)
+</Button>
     </Card>
   );
 }
