@@ -36,7 +36,7 @@ export default function AssignDriver() {
       setLoading(true);
   
       await api.post(
-        `/admin/triss/${selectedTrip.tripId}/assign/${selectedDriver.driverId}`
+              `/admin/trips/${selectedTrip.tripId}/assign/${selectedDriver.driverId}`
       );
   
       message.success("Driver assigned successfully");
