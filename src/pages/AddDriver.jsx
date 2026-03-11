@@ -10,7 +10,7 @@ export default function AddDriver() {
 
   const submit = async (values) => {
     try {
-      await api.post("/admin/drivers/add", values);
+      await api.post("/admin/drivers", values);
       message.success("Driver created successfully");
       navigate("/drivers");
     } catch (err) {
