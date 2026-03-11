@@ -1,30 +1,37 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* ===== HELPERS ===== */
-const num = (v) => Number(v || 0);
-
-/* ===== LOAD IMAGE FROM S3 AS BASE64 ===== */
+/* ===== LOAD IMAGE FROM S3 ===== */
 async function loadImageAsBase64(imageUrl) {
 try {
-if (!imageUrl) return null;
+if (!imageUrl) {
+console.warn("Signature URL missing");
+return null;
+}
 
 ```
-const res = await fetch(imageUrl);
+const response = await fetch(imageUrl);
 
-if (!res.ok) return null;
+if (!response.ok) {
+  console.warn("Signature fetch failed:", response.status);
+  return null;
+}
 
-const blob = await res.blob();
+const blob = await response.blob();
 
-return await new Promise((resolve) => {
+return new Promise((resolve) => {
   const reader = new FileReader();
-  reader.onloadend = () => resolve(reader.result);
+
+  reader.onloadend = () => {
+    resolve(reader.result);
+  };
+
   reader.readAsDataURL(blob);
 });
 ```
 
-} catch (error) {
-console.error("Error loading signature:", error);
+} catch (err) {
+console.error("Error loading signature:", err);
 return null;
 }
 }
@@ -37,6 +44,7 @@ const doc = new jsPDF("p", "mm", "a4");
 /* ===== TITLE ===== */
 doc.setFontSize(16);
 doc.text("DUTY SLIP", 105, 15, { align: "center" });
+
 doc.setFontSize(9);
 
 /* ===== TRIP DETAILS ===== */
@@ -51,7 +59,7 @@ body: [
 ],
 });
 
-/* ===== GARAGE DATA ===== */
+/* ===== GARAGE TABLE ===== */
 autoTable(doc, {
 startY: doc.lastAutoTable.finalY + 6,
 theme: "grid",
@@ -59,7 +67,7 @@ head: [["Type", "KM", "Time"]],
 body: garageData.map((g) => [
 g.type,
 g.km || "-",
-g.time || "-",
+g.time || "-"
 ]),
 });
 
@@ -68,10 +76,10 @@ const signY = doc.lastAutoTable.finalY + 18;
 
 doc.text("Customer Signature", 15, signY);
 
-const base64Img = await loadImageAsBase64(trip.signatureUrl);
+const base64Image = await loadImageAsBase64(trip.signatureUrl);
 
-if (base64Img) {
-doc.addImage(base64Img, "PNG", 15, signY + 4, 50, 20);
+if (base64Image) {
+doc.addImage(base64Image, "PNG", 15, signY + 4, 50, 20);
 } else {
 doc.text("Signature not available", 15, signY + 10);
 }
