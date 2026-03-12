@@ -2,7 +2,6 @@ import {
   Card,
   Descriptions,
   Table,
-  Image,
   Button,
   Tag,
   Row,
@@ -10,6 +9,7 @@ import {
   Input,
   TimePicker,
 } from "antd";
+import { Image as AntImage } from "antd";
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../api/api";
