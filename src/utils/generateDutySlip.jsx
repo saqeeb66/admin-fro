@@ -17,6 +17,7 @@ async function loadImageAsBase64(url) {
         "Image fetch failed:",
         response.status
       );
+
       return null;
     }
 
@@ -36,6 +37,7 @@ async function loadImageAsBase64(url) {
       "Error loading image:",
       err
     );
+
     return null;
   }
 }
@@ -48,11 +50,18 @@ export async function generateDutySlip(
   garageData
 ) {
   try {
-    const doc = new jsPDF("p", "mm", "a4");
+    const doc = new jsPDF(
+      "p",
+      "mm",
+      "a4"
+    );
 
     /* ================= TITLE ================= */
 
-    doc.setFont("helvetica", "bold");
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
 
     doc.setFontSize(18);
 
@@ -65,7 +74,10 @@ export async function generateDutySlip(
       }
     );
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
 
     doc.setFontSize(9);
 
@@ -74,14 +86,16 @@ export async function generateDutySlip(
     const totalKm =
       trip.startKm && trip.endKm
         ? (
-            trip.endKm - trip.startKm
+            trip.endKm -
+            trip.startKm
           ).toFixed(2)
         : 0;
 
-    /* ================= MAIN DETAILS TABLE ================= */
+    /* ================= MAIN TABLE ================= */
 
     autoTable(doc, {
       startY: 25,
+
       theme: "grid",
 
       styles: {
@@ -99,6 +113,7 @@ export async function generateDutySlip(
         [
           "Trip ID",
           trip.tripId || "-",
+
           "Vehicle",
           trip.vehicleType || "-",
         ],
@@ -141,7 +156,8 @@ export async function generateDutySlip(
 
         [
           "Vehicle No",
-          trip.driverCarNumber || "-",
+          trip.driverCarNumber ||
+            "-",
 
           "Distance",
           `${totalKm} KM`,
@@ -149,7 +165,9 @@ export async function generateDutySlip(
 
         [
           "Amount",
-          `₹ ${trip.totalAmount || 0}`,
+          `₹ ${
+            trip.totalAmount || 0
+          }`,
 
           "Status",
           trip.status?.replace(
@@ -176,7 +194,10 @@ export async function generateDutySlip(
         trip.endLocation ||
         "";
 
-      if (origin && destination) {
+      if (
+        origin &&
+        destination
+      ) {
         doc.setFontSize(12);
 
         doc.setFont(
@@ -195,43 +216,102 @@ export async function generateDutySlip(
           "normal"
         );
 
-        /* ===== GEOAPIFY STATIC MAP ===== */
+        const geoApiKey =
+          "e7ec72691f654176b3b5228ae69bd8b4";
 
-        const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=900&height=400&center=auto&zoom=4&marker=lonlat:77.5946,12.9716;color:%23ff0000;size:large&apiKey=e7ec72691f654176b3b5228ae69bd8b4`;
+        /* ===== GET ORIGIN COORDS ===== */
 
-        const mapImage =
-          await loadImageAsBase64(
-            staticMapUrl
+        const originGeo =
+          await fetch(
+            `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
+              origin
+            )}&apiKey=${geoApiKey}`
+          ).then((res) =>
+            res.json()
           );
 
-        if (mapImage) {
-          doc.addImage(
-            mapImage,
-            "PNG",
-            14,
-            nextY + 5,
-            180,
-            75
+        /* ===== GET DESTINATION COORDS ===== */
+
+        const destinationGeo =
+          await fetch(
+            `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
+              destination
+            )}&apiKey=${geoApiKey}`
+          ).then((res) =>
+            res.json()
           );
 
-          nextY += 90;
+        const originCoords =
+          originGeo?.features?.[0]
+            ?.geometry
+            ?.coordinates;
+
+        const destinationCoords =
+          destinationGeo
+            ?.features?.[0]
+            ?.geometry
+            ?.coordinates;
+
+        if (
+          originCoords &&
+          destinationCoords
+        ) {
+          const [
+            originLon,
+            originLat,
+          ] = originCoords;
+
+          const [
+            destLon,
+            destLat,
+          ] = destinationCoords;
+
+          /* ===== STATIC MAP URL ===== */
+
+          const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=900&height=400&marker=lonlat:${originLon},${originLat};color:%23ff0000;size:large&marker=lonlat:${destLon},${destLat};color:%2300ff00;size:large&path=stroke:%230000ff|weight:4|${originLon},${originLat}|${destLon},${destLat}&apiKey=${geoApiKey}`;
+
+          const mapImage =
+            await loadImageAsBase64(
+              staticMapUrl
+            );
+
+          if (mapImage) {
+            doc.addImage(
+              mapImage,
+              "PNG",
+              14,
+              nextY + 5,
+              180,
+              75
+            );
+
+            nextY += 90;
+          } else {
+            doc.setTextColor(
+              255,
+              0,
+              0
+            );
+
+            doc.text(
+              "Map unavailable",
+              14,
+              nextY + 10
+            );
+
+            doc.setTextColor(
+              0,
+              0,
+              0
+            );
+
+            nextY += 20;
+          }
         } else {
-          doc.setTextColor(
-            255,
-            0,
-            0
-          );
-
           doc.text(
-            "Map unavailable",
+            "Unable to fetch coordinates",
             14,
             nextY + 10
-          );
-
-          doc.setTextColor(
-            0,
-            0,
-            0
           );
 
           nextY += 20;
@@ -272,21 +352,27 @@ export async function generateDutySlip(
         ],
       ],
 
-      body: garageData.map((g) => [
-        g.type,
-        g.km || "-",
-        g.time || "-",
-      ]),
+      body: garageData.map(
+        (g) => [
+          g.type,
+          g.km || "-",
+          g.time || "-",
+        ]
+      ),
     });
 
-    /* ================= SIGNATURE SECTION ================= */
+    /* ================= SIGNATURE ================= */
 
     const signY =
-      doc.lastAutoTable.finalY + 15;
+      doc.lastAutoTable.finalY +
+      15;
 
     doc.setFontSize(12);
 
-    doc.setFont("helvetica", "bold");
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
 
     doc.text(
       "Customer Signature",
@@ -316,8 +402,6 @@ export async function generateDutySlip(
       14,
       signY + 14
     );
-
-    /* ================= SIGNATURE IMAGE ================= */
 
     try {
       const signature =
