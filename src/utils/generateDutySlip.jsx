@@ -47,6 +47,8 @@ export async function generateDutySlip(
       "a4"
     );
 
+    /* ================= TOTAL KM ================= */
+
     const totalKm =
       trip.startKm && trip.endKm
         ? (
@@ -59,16 +61,27 @@ export async function generateDutySlip(
 
     doc.setFontSize(12);
 
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
     doc.text(
       `Duty #${trip.tripId}`,
       14,
       15
     );
 
-    /* ================= LEFT DETAILS TABLE ================= */
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    /* ================= LEFT TABLE ================= */
 
     autoTable(doc, {
       startY: 20,
+
       margin: {
         left: 14,
         right: 110,
@@ -130,7 +143,7 @@ export async function generateDutySlip(
       ],
     });
 
-    /* ================= MAP ================= */
+    /* ================= ROUTE MAP ================= */
 
     try {
       const origin =
@@ -188,7 +201,7 @@ export async function generateDutySlip(
           destLat,
         ] = destinationCoords;
 
-        const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=600&height=300&marker=lonlat:${originLon},${originLat};color:%23ff0000;size:large&marker=lonlat:${destLon},${destLat};color:%2300ff00;size:large&path=stroke:%230000ff|weight:4|${originLon},${originLat}|${destLon},${destLat}&apiKey=${geoApiKey}`;
+        const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=600&height=350&marker=lonlat:${originLon},${originLat};color:%23ff0000;size:large&marker=lonlat:${destLon},${destLat};color:%2300ff00;size:large&path=stroke:%230000ff|weight:4|${originLon},${originLat}|${destLon},${destLat}&apiKey=${geoApiKey}`;
 
         const mapImage =
           await loadImageAsBase64(
@@ -208,12 +221,12 @@ export async function generateDutySlip(
       }
     } catch (err) {
       console.error(
-        "Map failed",
+        "Map failed:",
         err
       );
     }
 
-    /* ================= KM TABLE ================= */
+    /* ================= USER + DRIVER DETAILS ================= */
 
     autoTable(doc, {
       startY: 85,
@@ -225,53 +238,111 @@ export async function generateDutySlip(
         cellPadding: 2,
       },
 
-      head: [
-        [
-          "",
-          "G.Start",
-          "Reporting",
-          "Release",
-          "G.End",
-          "Total",
-        ],
-      ],
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: 0,
+      },
 
       body: [
         [
-          "KM",
-          trip.startKm || "0",
-          trip.startKm || "0",
-          trip.endKm || "0",
-          trip.endKm || "0",
-          totalKm,
+          "User Name",
+          trip.userName || "-",
+
+          "User Phone",
+          trip.userPhone || "-",
         ],
 
         [
-          "Time",
-          garageData?.[0]?.time ||
+          "Driver Name",
+          trip.driverName || "-",
+
+          "Driver Phone",
+          trip.driverPhone || "-",
+        ],
+
+        [
+          "Vehicle",
+          trip.driverCarType ||
             "-",
-          garageData?.[0]?.time ||
+
+          "Vehicle No",
+          trip.driverCarNumber ||
             "-",
-          garageData?.[1]?.time ||
-            "-",
-          garageData?.[1]?.time ||
-            "-",
-          "-",
+        ],
+
+        [
+          "Start KM",
+          trip.startKm || "0",
+
+          "End KM",
+          trip.endKm || "0",
+        ],
+
+        [
+          "Total Distance",
+          `${totalKm} KM`,
+
+          "Total Amount",
+          `₹ ${
+            trip.totalAmount || 0
+          }`,
         ],
       ],
+    });
+
+    /* ================= GARAGE TABLE ================= */
+
+    autoTable(doc, {
+      startY:
+        doc.lastAutoTable.finalY +
+        10,
+
+      theme: "grid",
+
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+      },
+
+      head: [
+        [
+          "Garage Type",
+          "KM",
+          "Time",
+        ],
+      ],
+
+      body: garageData.map(
+        (g) => [
+          g.type,
+          g.km || "-",
+          g.time || "-",
+        ]
+      ),
     });
 
     /* ================= SIGNATURE ================= */
 
     const signY =
-      doc.lastAutoTable.finalY + 20;
+      doc.lastAutoTable.finalY +
+      18;
 
     doc.setFontSize(10);
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
 
     doc.text(
       "Customer Signature:",
       14,
       signY
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
     );
 
     const signature =
