@@ -195,15 +195,9 @@ export async function generateDutySlip(
           "normal"
         );
 
-        /* ===== FREE OPENSTREETMAP STATIC MAP ===== */
+        /* ===== GEOAPIFY STATIC MAP ===== */
 
-        const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(
-          origin
-        )}&zoom=5&size=800x400&markers=${encodeURIComponent(
-          origin
-        )},red-pushpin|${encodeURIComponent(
-          destination
-        )},blue-pushpin`;
+        const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=900&height=400&center=auto&zoom=4&marker=lonlat:77.5946,12.9716;color:%23ff0000;size:large&apiKey=e7ec72691f654176b3b5228ae69bd8b4`;
 
         const mapImage =
           await loadImageAsBase64(
