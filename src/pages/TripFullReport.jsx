@@ -133,6 +133,9 @@ export default function TripFullReport() {
           {trip.startKm}
         </Descriptions.Item>
 
+        <Descriptions.Item label="User">{trip.userName}</Descriptions.Item>
+        <Descriptions.Item label="Phone">{trip.userPhone}</Descriptions.Item>
+
         <Descriptions.Item label="End Location">
           {trip.endLocation || trip.dropLocation}
         </Descriptions.Item>
