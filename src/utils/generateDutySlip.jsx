@@ -1,6 +1,5 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import html2canvas from "html2canvas";
 
 /* ================= LOAD IMAGE ================= */
 
@@ -41,7 +40,7 @@ async function loadImageAsBase64(url) {
   }
 }
 
-/* ================= PDF ================= */
+/* ================= GENERATE PDF ================= */
 
 export async function generateDutySlip(
   dutySlip,
@@ -53,7 +52,9 @@ export async function generateDutySlip(
 
     /* ================= TITLE ================= */
 
-    doc.setFontSize(17);
+    doc.setFont("helvetica", "bold");
+
+    doc.setFontSize(18);
 
     doc.text(
       "OFFICIAL DUTY SLIP",
@@ -64,9 +65,11 @@ export async function generateDutySlip(
       }
     );
 
+    doc.setFont("helvetica", "normal");
+
     doc.setFontSize(9);
 
-    /* ================= TOTAL KM ================= */
+    /* ================= TOTAL DISTANCE ================= */
 
     const totalKm =
       trip.startKm && trip.endKm
@@ -75,17 +78,23 @@ export async function generateDutySlip(
           ).toFixed(2)
         : 0;
 
-    /* ================= DETAILS TABLE ================= */
+    /* ================= MAIN DETAILS TABLE ================= */
 
     autoTable(doc, {
       startY: 25,
       theme: "grid",
+
       styles: {
         fontSize: 9,
+        cellPadding: 3,
       },
+
       headStyles: {
         fillColor: [0, 150, 136],
+        textColor: 255,
+        fontStyle: "bold",
       },
+
       body: [
         [
           "Trip ID",
@@ -99,6 +108,7 @@ export async function generateDutySlip(
           trip.startLocation ||
             trip.pickupLocation ||
             "-",
+
           "Start KM",
           trip.startKm || "-",
         ],
@@ -108,6 +118,7 @@ export async function generateDutySlip(
           trip.endLocation ||
             trip.dropLocation ||
             "-",
+
           "End KM",
           trip.endKm || "-",
         ],
@@ -115,6 +126,7 @@ export async function generateDutySlip(
         [
           "Driver",
           trip.driverName || "-",
+
           "Phone",
           trip.driverPhone || "-",
         ],
@@ -122,6 +134,7 @@ export async function generateDutySlip(
         [
           "Passenger",
           trip.userName || "-",
+
           "Phone",
           trip.userPhone || "-",
         ],
@@ -129,6 +142,7 @@ export async function generateDutySlip(
         [
           "Vehicle No",
           trip.driverCarNumber || "-",
+
           "Distance",
           `${totalKm} KM`,
         ],
@@ -136,6 +150,7 @@ export async function generateDutySlip(
         [
           "Amount",
           `₹ ${trip.totalAmount || 0}`,
+
           "Status",
           trip.status?.replace(
             "_",
@@ -145,72 +160,118 @@ export async function generateDutySlip(
       ],
     });
 
-    /* ================= MAP SECTION ================= */
-
-    const mapElement =
-      document.getElementById(
-        "trip-route-map"
-      );
+    /* ================= ROUTE MAP ================= */
 
     let nextY =
       doc.lastAutoTable.finalY + 10;
 
-    if (mapElement) {
-      try {
+    try {
+      const origin =
+        trip.pickupLocation ||
+        trip.startLocation ||
+        "";
+
+      const destination =
+        trip.dropLocation ||
+        trip.endLocation ||
+        "";
+
+      if (origin && destination) {
         doc.setFontSize(12);
 
+        doc.setFont(
+          "helvetica",
+          "bold"
+        );
+
         doc.text(
-          "Trip Route Map",
+          "Route Map (Pickup → Drop)",
           14,
           nextY
         );
 
-        const canvas =
-          await html2canvas(
-            mapElement,
-            {
-              useCORS: true,
-              allowTaint: true,
-              scale: 2,
-              logging: false,
-              backgroundColor: "#ffffff",
-            }
-          );
+        doc.setFont(
+          "helvetica",
+          "normal"
+        );
+
+        /* ===== GOOGLE STATIC MAP ===== */
+
+        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=1000x500&maptype=roadmap&markers=color:green|label:S|${encodeURIComponent(
+          origin
+        )}&markers=color:red|label:E|${encodeURIComponent(
+          destination
+        )}&path=color:0x0000ff|weight:5|${encodeURIComponent(
+          origin
+        )}|${encodeURIComponent(
+          destination
+        )}&key=YOUR_GOOGLE_MAPS_API_KEY`;
 
         const mapImage =
-          canvas.toDataURL(
-            "image/png",
-            1.0
+          await loadImageAsBase64(
+            staticMapUrl
           );
 
-        doc.addImage(
-          mapImage,
-          "PNG",
-          14,
-          nextY + 5,
-          180,
-          75
-        );
+        if (mapImage) {
+          doc.addImage(
+            mapImage,
+            "PNG",
+            14,
+            nextY + 5,
+            180,
+            75
+          );
 
-        nextY += 90;
-      } catch (err) {
-        console.error(
-          "Map screenshot failed:",
-          err
-        );
+          nextY += 90;
+        } else {
+          doc.setTextColor(
+            255,
+            0,
+            0
+          );
 
-        nextY += 10;
+          doc.text(
+            "Map unavailable",
+            14,
+            nextY + 10
+          );
+
+          doc.setTextColor(
+            0,
+            0,
+            0
+          );
+
+          nextY += 20;
+        }
       }
+    } catch (err) {
+      console.error(
+        "Map generation failed:",
+        err
+      );
+
+      nextY += 20;
     }
 
     /* ================= GARAGE TABLE ================= */
 
     autoTable(doc, {
       startY: nextY,
+
       theme: "grid",
+
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+
       headStyles: {
         fillColor: [0, 150, 136],
+        textColor: 255,
+        fontStyle: "bold",
       },
+
       head: [
         [
           "Garage Type",
@@ -218,6 +279,7 @@ export async function generateDutySlip(
           "Time",
         ],
       ],
+
       body: garageData.map((g) => [
         g.type,
         g.km || "-",
@@ -232,10 +294,17 @@ export async function generateDutySlip(
 
     doc.setFontSize(12);
 
+    doc.setFont("helvetica", "bold");
+
     doc.text(
       "Customer Signature",
       14,
       signY
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
     );
 
     doc.setFontSize(9);
@@ -258,30 +327,45 @@ export async function generateDutySlip(
 
     /* ================= SIGNATURE IMAGE ================= */
 
-    const signature =
-      await loadImageAsBase64(
-        trip.signatureUrl
-      );
+    try {
+      const signature =
+        await loadImageAsBase64(
+          trip.signatureUrl
+        );
 
-    if (signature) {
-      doc.addImage(
-        signature,
-        "PNG",
-        14,
-        signY + 18,
-        60,
-        30
-      );
-    } else {
-      doc.setTextColor(255, 0, 0);
+      if (signature) {
+        doc.addImage(
+          signature,
+          "PNG",
+          14,
+          signY + 18,
+          60,
+          30
+        );
+      } else {
+        doc.setTextColor(
+          255,
+          0,
+          0
+        );
 
-      doc.text(
-        "Signature unavailable",
-        14,
-        signY + 28
-      );
+        doc.text(
+          "Signature unavailable",
+          14,
+          signY + 28
+        );
 
-      doc.setTextColor(0, 0, 0);
+        doc.setTextColor(
+          0,
+          0,
+          0
+        );
+      }
+    } catch (err) {
+      console.error(
+        "Signature failed:",
+        err
+      );
     }
 
     /* ================= EXPENSES ================= */
@@ -292,10 +376,20 @@ export async function generateDutySlip(
     ) {
       autoTable(doc, {
         startY: signY + 55,
+
         theme: "grid",
+
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+        },
+
         headStyles: {
           fillColor: [0, 150, 136],
+          textColor: 255,
+          fontStyle: "bold",
         },
+
         head: [
           [
             "Type",
@@ -303,11 +397,14 @@ export async function generateDutySlip(
             "Amount",
           ],
         ],
+
         body: trip.expenses.map(
           (expense) => [
             expense.type || "-",
+
             expense.description ||
               "-",
+
             `₹ ${
               expense.amount || 0
             }`,
@@ -319,6 +416,8 @@ export async function generateDutySlip(
     /* ================= FOOTER ================= */
 
     doc.setFontSize(10);
+
+    doc.setTextColor(120);
 
     doc.text(
       "Generated by Arcot Cabs",
