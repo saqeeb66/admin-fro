@@ -1,24 +1,24 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* ===== LOAD IMAGE FROM URL ===== */
-async function loadImageAsBase64(imageUrl) {
-  try {
-    if (!imageUrl) {
-      console.warn("Image URL missing");
-      return null;
-    }
+/* ================= LOAD IMAGE ================= */
 
-    const response = await fetch(imageUrl);
+async function loadImageAsBase64(url) {
+  try {
+    if (!url) return null;
+
+    const response = await fetch(url, {
+      mode: "cors",
+    });
 
     if (!response.ok) {
-      console.warn("Image fetch failed:", response.status);
+      console.error("Image fetch failed:", response.status);
       return null;
     }
 
     const blob = await response.blob();
 
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       const reader = new FileReader();
 
       reader.onloadend = () => {
@@ -33,7 +33,8 @@ async function loadImageAsBase64(imageUrl) {
   }
 }
 
-/* ===== GENERATE DUTY SLIP ===== */
+/* ================= PDF ================= */
+
 export async function generateDutySlip(
   dutySlip,
   trip,
@@ -43,14 +44,12 @@ export async function generateDutySlip(
 
   /* ================= TITLE ================= */
 
-  doc.setFontSize(18);
-  doc.setTextColor(80, 0, 120);
+  doc.setFontSize(17);
   doc.text("OFFICIAL DUTY SLIP", 105, 15, {
     align: "center",
   });
 
   doc.setFontSize(9);
-  doc.setTextColor(0, 0, 0);
 
   /* ================= TOTAL KM ================= */
 
@@ -59,7 +58,7 @@ export async function generateDutySlip(
       ? (trip.endKm - trip.startKm).toFixed(2)
       : 0;
 
-  /* ================= TRIP DETAILS ================= */
+  /* ================= MAIN DETAILS ================= */
 
   autoTable(doc, {
     startY: 25,
@@ -94,58 +93,41 @@ export async function generateDutySlip(
       ],
 
       [
-        "Total Distance",
-        `${totalKm} KM`,
-        "Total Amount",
-        `₹ ${trip.totalAmount || 0}`,
-      ],
-
-      [
-        "Driver Name",
+        "Driver",
         trip.driverName || "-",
-        "Driver Phone",
+        "Phone",
         trip.driverPhone || "-",
       ],
 
       [
-        "User Name",
+        "Customer",
         trip.userName || "-",
-        "User Phone",
+        "Phone",
         trip.userPhone || "-",
       ],
 
       [
         "Vehicle No",
         trip.driverCarNumber || "-",
-        "Vehicle Type",
-        trip.driverCarType || "-",
+        "Distance",
+        `${totalKm} KM`,
       ],
 
       [
-        "Trip Status",
-        trip.status
-          ? trip.status.replace("_", " ")
-          : "-",
-        "",
-        "",
+        "Total Amount",
+        `₹ ${trip.totalAmount || 0}`,
+        "Status",
+        trip.status?.replace("_", " ") || "-",
       ],
     ],
   });
 
-  /* ================= GARAGE MOVEMENT ================= */
-
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 8,
-    theme: "grid",
-    head: [["Garage Type", "KM", "Time"]],
-    body: garageData.map((g) => [
-      g.type,
-      g.km || "-",
-      g.time || "-",
-    ]),
-  });
-
   /* ================= MAP SECTION ================= */
+
+  const mapY = doc.lastAutoTable.finalY + 12;
+
+  doc.setFontSize(12);
+  doc.text("Trip Route", 14, mapY);
 
   const origin =
     trip.pickupLocation ||
@@ -157,109 +139,50 @@ export async function generateDutySlip(
     trip.endLocation ||
     "";
 
-  const mapUrl =
-    origin && destination
-      ? `https://maps.googleapis.com/maps/api/staticmap?size=600x300&markers=color:green|${encodeURIComponent(
-          origin
-        )}&markers=color:red|${encodeURIComponent(
-          destination
-        )}&path=color:0x0000ff|weight:5|${encodeURIComponent(
-          origin
-        )}|${encodeURIComponent(destination)}`
-      : null;
+  const googleMapLink = `https://www.google.com/maps/dir/${encodeURIComponent(
+    origin
+  )}/${encodeURIComponent(destination)}`;
 
-  if (mapUrl) {
-    try {
-      doc.setFontSize(12);
-      doc.text(
-        "Trip Route Map",
-        14,
-        doc.lastAutoTable.finalY + 12
-      );
+  doc.setFontSize(9);
 
-      const mapImage =
-        await loadImageAsBase64(mapUrl);
+  doc.text("Pickup:", 14, mapY + 8);
+  doc.text(origin || "-", 35, mapY + 8);
 
-      if (mapImage) {
-        doc.addImage(
-          mapImage,
-          "PNG",
-          14,
-          doc.lastAutoTable.finalY + 16,
-          180,
-          60
-        );
-      } else {
-        doc.text(
-          "Map preview unavailable",
-          14,
-          doc.lastAutoTable.finalY + 25
-        );
-      }
-    } catch (err) {
-      console.error("Map image failed:", err);
+  doc.text("Drop:", 14, mapY + 15);
+  doc.text(destination || "-", 35, mapY + 15);
+
+  doc.setTextColor(0, 0, 255);
+
+  doc.textWithLink(
+    "Open Route In Google Maps",
+    14,
+    mapY + 25,
+    {
+      url: googleMapLink,
     }
-  }
+  );
 
-  /* ================= ODOMETER IMAGES ================= */
+  doc.setTextColor(0, 0, 0);
 
-  let imageSectionY = mapUrl
-    ? doc.lastAutoTable.finalY + 85
-    : doc.lastAutoTable.finalY + 18;
+  /* ================= GARAGE TABLE ================= */
 
-  doc.setFontSize(12);
-  doc.text("Odometer Proof", 14, imageSectionY);
+  autoTable(doc, {
+    startY: mapY + 35,
+    theme: "grid",
+    head: [["Garage Type", "KM", "Time"]],
+    body: garageData.map((g) => [
+      g.type,
+      g.km || "-",
+      g.time || "-",
+    ]),
+  });
 
-  const startOdo =
-    await loadImageAsBase64(
-      trip.odometerImageUrl
-    );
+  /* ================= SIGNATURE ================= */
 
-  const endOdo =
-    await loadImageAsBase64(
-      trip.endOdometerImageUrl
-    );
-
-  if (startOdo) {
-    doc.text(
-      "Start Odometer",
-      14,
-      imageSectionY + 8
-    );
-
-    doc.addImage(
-      startOdo,
-      "JPEG",
-      14,
-      imageSectionY + 12,
-      80,
-      50
-    );
-  }
-
-  if (endOdo) {
-    doc.text(
-      "End Odometer",
-      110,
-      imageSectionY + 8
-    );
-
-    doc.addImage(
-      endOdo,
-      "JPEG",
-      110,
-      imageSectionY + 12,
-      80,
-      50
-    );
-  }
-
-  /* ================= CUSTOMER SIGNATURE ================= */
-
-  const signatureY = imageSectionY + 75;
+  const signY = doc.lastAutoTable.finalY + 15;
 
   doc.setFontSize(12);
-  doc.text("Customer Signature", 14, signatureY);
+  doc.text("Customer Signature", 14, signY);
 
   doc.setFontSize(9);
 
@@ -268,7 +191,7 @@ export async function generateDutySlip(
       trip.userName || "-"
     }`,
     14,
-    signatureY + 8
+    signY + 8
   );
 
   doc.text(
@@ -276,66 +199,45 @@ export async function generateDutySlip(
       trip.userPhone || "-"
     }`,
     14,
-    signatureY + 14
+    signY + 14
   );
 
-  const signatureImage =
+  const signatureBase64 =
     await loadImageAsBase64(
       trip.signatureUrl
     );
 
-  if (signatureImage) {
+  if (signatureBase64) {
     doc.addImage(
-      signatureImage,
+      signatureBase64,
       "PNG",
       14,
-      signatureY + 18,
+      signY + 18,
       60,
-      25
+      30
     );
   } else {
     doc.text(
-      "Signature not available",
+      "Signature unavailable",
       14,
-      signatureY + 28
+      signY + 28
     );
-  }
-
-  /* ================= DRIVER EXPENSES ================= */
-
-  const expensesStartY = signatureY + 55;
-
-  if (trip.expenses && trip.expenses.length > 0) {
-    autoTable(doc, {
-      startY: expensesStartY,
-      theme: "grid",
-      head: [["Type", "Description", "Amount"]],
-      body: trip.expenses.map((e) => [
-        e.type || "-",
-        e.description || "-",
-        `₹ ${e.amount || 0}`,
-      ]),
-    });
   }
 
   /* ================= FOOTER ================= */
 
-  const finalY =
-    doc.lastAutoTable?.finalY ||
-    expensesStartY + 10;
-
   doc.setFontSize(10);
 
   doc.text(
-    "Generated by Arcot Cabs Management System",
+    "Generated by Arcot Cabs",
     105,
-    finalY + 15,
+    285,
     {
       align: "center",
     }
   );
 
-  /* ================= SAVE PDF ================= */
+  /* ================= SAVE ================= */
 
   doc.save(`DutySlip-${trip.tripId}.pdf`);
 }
