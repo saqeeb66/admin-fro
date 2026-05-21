@@ -8,9 +8,16 @@ async function loadImageAsBase64(url) {
   try {
     if (!url) return null;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      mode: "cors",
+      cache: "no-cache",
+    });
 
     if (!response.ok) {
+      console.error(
+        "Image fetch failed:",
+        response.status
+      );
       return null;
     }
 
@@ -26,7 +33,10 @@ async function loadImageAsBase64(url) {
       reader.readAsDataURL(blob);
     });
   } catch (err) {
-    console.error(err);
+    console.error(
+      "Error loading image:",
+      err
+    );
     return null;
   }
 }
@@ -38,202 +48,296 @@ export async function generateDutySlip(
   trip,
   garageData
 ) {
-  const doc = new jsPDF("p", "mm", "a4");
+  try {
+    const doc = new jsPDF("p", "mm", "a4");
 
-  /* ================= TITLE ================= */
+    /* ================= TITLE ================= */
 
-  doc.setFontSize(17);
+    doc.setFontSize(17);
 
-  doc.text("OFFICIAL DUTY SLIP", 105, 15, {
-    align: "center",
-  });
+    doc.text(
+      "OFFICIAL DUTY SLIP",
+      105,
+      15,
+      {
+        align: "center",
+      }
+    );
 
-  doc.setFontSize(9);
+    doc.setFontSize(9);
 
-  /* ================= TOTAL KM ================= */
+    /* ================= TOTAL KM ================= */
 
-  const totalKm =
-    trip.startKm && trip.endKm
-      ? (trip.endKm - trip.startKm).toFixed(2)
-      : 0;
+    const totalKm =
+      trip.startKm && trip.endKm
+        ? (
+            trip.endKm - trip.startKm
+          ).toFixed(2)
+        : 0;
 
-  /* ================= DETAILS TABLE ================= */
+    /* ================= DETAILS TABLE ================= */
 
-  autoTable(doc, {
-    startY: 25,
-    theme: "grid",
-    body: [
-      [
-        "Trip ID",
-        trip.tripId || "-",
-        "Vehicle",
-        trip.vehicleType || "-",
+    autoTable(doc, {
+      startY: 25,
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+      },
+      headStyles: {
+        fillColor: [0, 150, 136],
+      },
+      body: [
+        [
+          "Trip ID",
+          trip.tripId || "-",
+          "Vehicle",
+          trip.vehicleType || "-",
+        ],
+
+        [
+          "Start Location",
+          trip.startLocation ||
+            trip.pickupLocation ||
+            "-",
+          "Start KM",
+          trip.startKm || "-",
+        ],
+
+        [
+          "End Location",
+          trip.endLocation ||
+            trip.dropLocation ||
+            "-",
+          "End KM",
+          trip.endKm || "-",
+        ],
+
+        [
+          "Driver",
+          trip.driverName || "-",
+          "Phone",
+          trip.driverPhone || "-",
+        ],
+
+        [
+          "Passenger",
+          trip.userName || "-",
+          "Phone",
+          trip.userPhone || "-",
+        ],
+
+        [
+          "Vehicle No",
+          trip.driverCarNumber || "-",
+          "Distance",
+          `${totalKm} KM`,
+        ],
+
+        [
+          "Amount",
+          `₹ ${trip.totalAmount || 0}`,
+          "Status",
+          trip.status?.replace(
+            "_",
+            " "
+          ) || "-",
+        ],
       ],
+    });
 
-      [
-        "Start Location",
-        trip.startLocation ||
-          trip.pickupLocation ||
-          "-",
-        "Start KM",
-        trip.startKm || "-",
-      ],
+    /* ================= MAP SECTION ================= */
 
-      [
-        "End Location",
-        trip.endLocation ||
-          trip.dropLocation ||
-          "-",
-        "End KM",
-        trip.endKm || "-",
-      ],
-
-      [
-        "Driver",
-        trip.driverName || "-",
-        "Phone",
-        trip.driverPhone || "-",
-      ],
-
-      [
-        "Passenger",
-        trip.userName || "-",
-        "Phone",
-        trip.userPhone || "-",
-      ],
-
-      [
-        "Vehicle No",
-        trip.driverCarNumber || "-",
-        "Distance",
-        `${totalKm} KM`,
-      ],
-
-      [
-        "Amount",
-        `₹ ${trip.totalAmount || 0}`,
-        "Status",
-        trip.status?.replace("_", " ") || "-",
-      ],
-    ],
-  });
-
-  /* ================= ROUTE MAP ================= */
-
-  const mapElement =
-    document.getElementById("trip-route-map");
-
-  if (mapElement) {
-    try {
-      doc.setFontSize(12);
-
-      doc.text(
-        "Trip Route Map",
-        14,
-        doc.lastAutoTable.finalY + 10
+    const mapElement =
+      document.getElementById(
+        "trip-route-map"
       );
 
-      const canvas = await html2canvas(
-        mapElement,
-        {
-          useCORS: true,
-          allowTaint: true,
-          scale: 2,
-        }
+    let nextY =
+      doc.lastAutoTable.finalY + 10;
+
+    if (mapElement) {
+      try {
+        doc.setFontSize(12);
+
+        doc.text(
+          "Trip Route Map",
+          14,
+          nextY
+        );
+
+        const canvas =
+          await html2canvas(
+            mapElement,
+            {
+              useCORS: true,
+              allowTaint: true,
+              scale: 2,
+              logging: false,
+              backgroundColor: "#ffffff",
+            }
+          );
+
+        const mapImage =
+          canvas.toDataURL(
+            "image/png",
+            1.0
+          );
+
+        doc.addImage(
+          mapImage,
+          "PNG",
+          14,
+          nextY + 5,
+          180,
+          75
+        );
+
+        nextY += 90;
+      } catch (err) {
+        console.error(
+          "Map screenshot failed:",
+          err
+        );
+
+        nextY += 10;
+      }
+    }
+
+    /* ================= GARAGE TABLE ================= */
+
+    autoTable(doc, {
+      startY: nextY,
+      theme: "grid",
+      headStyles: {
+        fillColor: [0, 150, 136],
+      },
+      head: [
+        [
+          "Garage Type",
+          "KM",
+          "Time",
+        ],
+      ],
+      body: garageData.map((g) => [
+        g.type,
+        g.km || "-",
+        g.time || "-",
+      ]),
+    });
+
+    /* ================= SIGNATURE SECTION ================= */
+
+    const signY =
+      doc.lastAutoTable.finalY + 15;
+
+    doc.setFontSize(12);
+
+    doc.text(
+      "Customer Signature",
+      14,
+      signY
+    );
+
+    doc.setFontSize(9);
+
+    doc.text(
+      `Customer Name: ${
+        trip.userName || "-"
+      }`,
+      14,
+      signY + 8
+    );
+
+    doc.text(
+      `Customer Phone: ${
+        trip.userPhone || "-"
+      }`,
+      14,
+      signY + 14
+    );
+
+    /* ================= SIGNATURE IMAGE ================= */
+
+    const signature =
+      await loadImageAsBase64(
+        trip.signatureUrl
       );
 
-      const mapImage =
-        canvas.toDataURL("image/png");
-
+    if (signature) {
       doc.addImage(
-        mapImage,
+        signature,
         "PNG",
         14,
-        doc.lastAutoTable.finalY + 15,
-        180,
-        70
+        signY + 18,
+        60,
+        30
       );
-    } catch (err) {
-      console.error(
-        "Map screenshot failed",
-        err
+    } else {
+      doc.setTextColor(255, 0, 0);
+
+      doc.text(
+        "Signature unavailable",
+        14,
+        signY + 28
       );
+
+      doc.setTextColor(0, 0, 0);
     }
-  }
 
-  /* ================= GARAGE TABLE ================= */
+    /* ================= EXPENSES ================= */
 
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 90,
-    theme: "grid",
-    head: [["Garage Type", "KM", "Time"]],
-    body: garageData.map((g) => [
-      g.type,
-      g.km || "-",
-      g.time || "-",
-    ]),
-  });
+    if (
+      trip.expenses &&
+      trip.expenses.length > 0
+    ) {
+      autoTable(doc, {
+        startY: signY + 55,
+        theme: "grid",
+        headStyles: {
+          fillColor: [0, 150, 136],
+        },
+        head: [
+          [
+            "Type",
+            "Description",
+            "Amount",
+          ],
+        ],
+        body: trip.expenses.map(
+          (expense) => [
+            expense.type || "-",
+            expense.description ||
+              "-",
+            `₹ ${
+              expense.amount || 0
+            }`,
+          ]
+        ),
+      });
+    }
 
-  /* ================= SIGNATURE ================= */
+    /* ================= FOOTER ================= */
 
-  const signY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(10);
 
-  doc.setFontSize(12);
-
-  doc.text("Customer Signature", 14, signY);
-
-  doc.setFontSize(9);
-
-  doc.text(
-    `Customer Name: ${
-      trip.userName || "-"
-    }`,
-    14,
-    signY + 8
-  );
-
-  doc.text(
-    `Customer Phone: ${
-      trip.userPhone || "-"
-    }`,
-    14,
-    signY + 14
-  );
-
-  const signature =
-    await loadImageAsBase64(
-      trip.signatureUrl
-    );
-
-  if (signature) {
-    doc.addImage(
-      signature,
-      "PNG",
-      14,
-      signY + 18,
-      60,
-      30
-    );
-  } else {
     doc.text(
-      "Signature unavailable",
-      14,
-      signY + 28
+      "Generated by Arcot Cabs",
+      105,
+      285,
+      {
+        align: "center",
+      }
+    );
+
+    /* ================= SAVE ================= */
+
+    doc.save(
+      `DutySlip-${trip.tripId}.pdf`
+    );
+  } catch (err) {
+    console.error(
+      "PDF Generation Failed:",
+      err
     );
   }
-
-  /* ================= FOOTER ================= */
-
-  doc.text(
-    "Generated by Arcot Cabs",
-    105,
-    285,
-    {
-      align: "center",
-    }
-  );
-
-  /* ================= SAVE ================= */
-
-  doc.save(`DutySlip-${trip.tripId}.pdf`);
 }
