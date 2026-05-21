@@ -195,17 +195,15 @@ export async function generateDutySlip(
           "normal"
         );
 
-        /* ===== GOOGLE STATIC MAP ===== */
+        /* ===== FREE OPENSTREETMAP STATIC MAP ===== */
 
-        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=1000x500&maptype=roadmap&markers=color:green|label:S|${encodeURIComponent(
+        const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(
           origin
-        )}&markers=color:red|label:E|${encodeURIComponent(
-          destination
-        )}&path=color:0x0000ff|weight:5|${encodeURIComponent(
+        )}&zoom=5&size=800x400&markers=${encodeURIComponent(
           origin
-        )}|${encodeURIComponent(
+        )},red-pushpin|${encodeURIComponent(
           destination
-        )}&key=YOUR_GOOGLE_MAPS_API_KEY`;
+        )},blue-pushpin`;
 
         const mapImage =
           await loadImageAsBase64(
